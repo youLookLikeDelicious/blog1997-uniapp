@@ -1,0 +1,104 @@
+<template>
+  <view class="container uni-px-10" hover-class="none" hover-stop-propagation="false">
+    <!-- <uni-easyinput v-model="" type="text" placeholder="" @confirm="" /> -->
+    <uni-forms ref="form" :rules="rules" :modelValue="formData" label-position="top">
+      <uni-forms-item required label="相册" name="">
+        <view class="flex-1" hover-class="none" hover-stop-propagation="false">
+          <uni-easyinput v-if="createAlbum" v-model="formData.album" type="text" placeholder="请输入相册名" />
+          <uni-data-select v-else v-model="formData.album" class="flex-1" :localdata="albumList"></uni-data-select>
+          <text class="uni-mt-5 uni-pl-2 color-grey" style="font-size: 24rpx;" selectable="false" space="false" decode="false" @click="handleSwitchInput">
+            {{ createAlbum ? '选择其他相册' : '新建相册' }}
+          </text>
+        </view>
+      </uni-forms-item>
+      <uni-forms-item required range label="图片">
+        <uni-file-picker
+          ref="filePicker"
+          v-model="formData.files"
+          mode="grid" 
+          :auto-upload="false"
+          file-mediatype="image"
+        />
+      </uni-forms-item>
+      <button type="primary" @click="handleSubmit">提交</button>
+    </uni-forms>
+  </view>
+</template>
+
+<script lang="ts" setup>
+import FormData from '../utils/form-data'
+import { reactive, ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import { getAllAlbum, uploadGallery } from '@/sub-pages/api/gallery'
+
+const rules = {
+  album_id: {
+    rules: [{ required: true, errorMessage: '请选择相册' }]
+  }
+}
+
+const albumList = reactive<
+  { 
+    value: string,
+    text: string,
+    id: number
+  }[]>([])
+
+onLoad((options) => {
+
+  getAllAlbum().then(res => {
+    albumList.push(...res.data.data.map((item: { name: string, id: number }) => ({ text: item.name, value: item.name, id: item.id })))
+    if (options && options.album_id) {
+      formData.album = albumList.find(album => album.id === +options.album_id)?.value || ''
+    }
+  })
+})
+
+const createAlbum = ref(false)
+// 修改相册输入类型
+const handleSwitchInput = () => {
+  formData.album = ''
+  createAlbum.value = !createAlbum.value
+}
+
+const form = ref()
+const formData = reactive({
+  files: [],
+  album: ''
+})
+
+// 提交表单
+const filePicker = ref()
+const handleSubmit = () => {
+  if (!filePicker.value.files.length) {
+    uni.showToast({ title: '请选择图片' })
+    return
+  }
+  const customFormData = new FormData()
+  customFormData.append('album', formData.album)
+  customFormData.appendFile(filePicker.value.files.map((file: { url: string }) => ({ url: file.url, name: 'upfile[]' })))
+  const data = customFormData.getData()
+  uploadGallery(data.buffer, { 'content-type': data.contentType })
+    .then((res) => {
+      setTimeout(() => uni.showToast({ title: '上传成功' }))
+      uni.navigateBack({ delta: 1 })
+      uni.$emit('refresh-album')
+      uni.$emit('refresh-gallery')
+    })
+}
+</script>
+
+<style lang="scss" scoped>
+uni-data-select {
+  :deep(.uni-select__input-text) {
+    width: auto;
+    flex: 1;
+  }
+}
+:deep(.uni-file-picker__container) {
+  flex-direction: row;
+  .is-add {
+    background-color: rgba($uni-color-primary, .2);
+  }
+}
+</style>

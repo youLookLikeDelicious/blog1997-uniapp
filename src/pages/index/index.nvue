@@ -1,0 +1,59 @@
+<template>
+  <view class="container">
+		<view class="header-wrapper">
+			<view class="bg-primary search-wrapper" hover-class="none" hover-stop-propagation="false">
+				<uni-search-bar class="uni-mb-10" radius="5" placeholder="搜一搜" v-model="query.keyword" clearButton="auto" cancelButton="none" @change="handleSearch" />
+			</view>
+			<v-tab :options="topics" class="v-tab bg-primary" v-model="query.tag_id" @change="handleSearch" />
+		</view>
+		<article-list :more-status="moreStatus" :articles="dataList"></article-list>
+		<empty :empty="!dataList.length && moreStatus === 'norMore'"></empty>
+  </view>
+</template>
+
+<script setup lang="ts">
+import Empty from '@/components/empty/index.vue'
+import { reactive } from 'vue'
+import { getIndex } from '@/api/index'
+import { onShow } from '@dcloudio/uni-app'
+import { usePage } from '@/composition/page'
+import VTab from '@/components/v-tab/index.vue'
+import { getArticleList, getTags } from '@/api/article'
+import ArticleList from './components/article-list.nvue'
+
+// 是否初始化
+let init = false
+
+const { dataList, handleSearch, query, moreStatus } = usePage<component.Article>(getArticleList, true)
+query.value.tag_id = ''
+
+const topics = reactive<{ id: number | string, name: string }[]>([{ id: '', name: '推荐' }])
+
+onShow(() => {
+	if (init) return
+	init = true
+	getIndex().then(res => {
+		dataList.push(...res.data.data)
+		query.value.last_page = res.data.meta.last_page
+	})
+	getTags().then(res => {
+		topics.splice(1, topics.length - 1, ...res.data.data)
+	})
+})
+</script>
+
+<style lang="scss" scoped>
+@import './index.scss';
+
+:deep(.uni-searchbar__box) {
+	background-color: #333 !important;
+}
+
+.header-wrapper {
+	height: 180rpx;
+	position: sticky;
+	top: 0;
+	z-index: 99;
+	background-color: $uni-bg-color;
+}
+</style>

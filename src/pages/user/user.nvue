@@ -1,0 +1,95 @@
+<template>
+	<view class="display-flex align-item-center uni-pb-10 justify-content-center user-box">
+		<view class="flex-direction-row align-item-center">
+			<image v-if="userStore.avatar" class="avatar-large" :src="userStore.avatar" mode="aspectFill" lazy-load="false" @click="handleChangeAvatar" />
+			<view v-else class="avatar-large icon-avatar align-item-center justify-content-center">
+				<uni-icons type="person" color="" size="45" />
+			</view>
+			<text v-if="userStore.id" class="uni-ml-3 color-text" user-select="false" space="false" decode="false">
+				{{ userStore.name }}
+			</text>
+			<text v-else class="uni-ml-3 color-text" user-select="false" @click="handleLogin" space="false" decode="false">
+				登录
+			</text>
+		</view>
+	</view>
+	<uni-list>
+		<uni-list-item title="相册" class="bg-primary" show-extra-icon :extra-icon="{ type: 'images', size: 27, color: '#f5f7fa' }" to="/sub-pages/gallery/index">
+		</uni-list-item>
+		<uni-list-item title="消息" class="bg-primary" show-extra-icon :extra-icon="{ type: 'notification', size: 27, color: '#f5f7fa' }">
+		</uni-list-item>
+	</uni-list>
+	<view v-if="userStore.id" class="uni-mt-10 uni-py-6 align-item-center bg-primary" hover-class="none" hover-stop-propagation="false" @click="handleLogout">
+		<text>退出登陆</text>
+	</view>
+</template>
+
+<script lang="ts" setup>
+import { inject } from 'vue'
+import { logout } from '@/api'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
+
+// 登录
+const handleLogin = () => {
+	uni.navigateTo({
+		url: '/sub-pages/login/index'
+	})
+}
+
+// 登出
+const handleLogout = () => {
+	logout().then(() => {
+		userStore.$reset()
+		uni.setStorageSync('app_token', '')
+	})
+}
+
+const API_URL = inject('API_URL')
+// 修改头像
+interface resData {
+	avatar: string
+}
+const handleChangeAvatar = () => {
+	uni.chooseMedia({
+		mediaType: ['image'],
+		success: (data)=>{
+			const token = uni.getStorageSync('app_token')
+			uni.uploadFile({
+				url: `${API_URL}/user/update/${userStore.id}`,
+				name: 'avatar',
+				header: {
+					Authorization: `Bearer ${token}`
+				},
+				filePath: data.tempFiles[0].tempFilePath,
+				success: (data)=>{
+					data = JSON.parse(data.data)
+					const resData = data.data as unknown as resData
+					userStore.avatar = resData.avatar
+				}
+			})
+		}
+	})
+}
+</script>
+
+<style lang="scss" scoped>
+.login-btn {
+	width: 350rpx;
+}
+.logout {
+	position: fixed;
+	bottom: 90rpx;
+}
+.user-box {
+	height: 350rpx;
+	background-color: rgb(41, 121, 255);
+	.icon-avatar {
+		background-color: $uni-border-color;
+	}
+}
+:deep(.uni-list-item__content-title) {
+	color: #f5f7fa;
+}
+</style>

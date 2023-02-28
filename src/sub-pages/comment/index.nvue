@@ -1,0 +1,51 @@
+<template>
+  <view class="container" hover-class="none" hover-stop-propagation="false">
+    <comment :load-data="(query: any) => getComments(ableId, query)" ref="commentEl" :able-id="ableId" :current-page="2" />
+  </view>
+</template>
+
+<script lang="ts" setup>
+import { onLoad } from '@dcloudio/uni-app'
+import { getComments } from '@/api/article'
+import { ref, computed, watchEffect } from 'vue'
+import Comment from '@/components/comment/index.nvue'
+import { onPullDownRefresh, onReachBottom } from '@dcloudio/uni-app'
+
+const ableId = ref<string>('')
+const commentEl = ref<typeof Comment>()
+
+const title = computed(() => {
+  return `评论(${commentEl?.value?.query.total || 0})`
+})
+
+watchEffect(() => {
+  uni.setNavigationBarTitle({ title: title.value })
+})
+
+onLoad((options) => {
+  if (!options) return
+  ableId.value = decodeURIComponent(options.able_id)
+})
+
+onPullDownRefresh(() => {
+  if (!commentEl.value || !commentEl.value.hasMore) {
+    uni.stopPullDownRefresh()
+    return
+  }
+  commentEl.value.query.page += 1
+  commentEl.value.loadData('down').then(() => {
+    uni.stopPullDownRefresh()
+  })
+})
+
+onReachBottom(() => {
+  if (!commentEl.value || !commentEl.value.hasMore) return
+  commentEl.value.query.page += 1
+  commentEl.value.loadData('up')
+})
+
+</script>
+
+<style lang="scss">
+
+</style>

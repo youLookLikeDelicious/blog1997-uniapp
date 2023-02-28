@@ -1,0 +1,58 @@
+<template>
+  <view class="align-item-center" hover-class="none" hover-stop-propagation="false">
+    <view class="title justify-content-center">
+      <text class="" space="false" decode="false">
+        BLOG1997
+      </text>
+    </view>
+    <button class="btn" type="primary" @click="handleWeixinLogin">微信登录</button>
+    <button class="btn uni-mt-8" @click="handleEmailLogin" type="default">邮箱登录</button>
+  </view>
+</template>
+
+<script lang="ts" setup>
+import { login } from '@/api'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
+
+// 微信登陆
+const handleWeixinLogin = () => {
+  uni.getUserProfile ({
+		desc: '用于完善用户基础信息',
+		lang: 'zh_CN',
+		success({ userInfo }) {
+			wx.login({
+				timeout:10000,
+				success: ({ code })=>{
+					login({ code, type: 'weixinMini', device_name: 'weixinMini', ...userInfo })
+						.then((res) => {
+							userStore.$patch({ ...res.data.data, initialized: true })
+							uni.setStorage({
+								key: 'app_token',
+								data: res.data.data.token
+							})
+              uni.navigateBack({ delta: 1 })
+						})
+				},
+				fail: ()=>{},
+				complete: ()=>{}
+			})
+		}
+	})
+}
+
+// 邮箱登陆
+const handleEmailLogin = () => {
+  uni.navigateTo({ url: '/sub-pages/login/email' })
+}
+</script>
+
+<style lang="scss" scoped>
+.title {
+  height: 320rpx;
+}
+.btn {
+  width: 700rpx;
+}
+</style>

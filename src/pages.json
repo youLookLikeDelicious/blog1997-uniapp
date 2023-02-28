@@ -1,0 +1,103 @@
+{
+	"pages": [ //pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages
+		{
+			"path": "pages/index/index",
+			"style": {
+				"navigationBarTitleText": "Blog1997",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/user/user",
+			"style": {
+				"navigationBarTitleText": "我的"
+			}
+		}
+	],
+	"subPackages": [
+		{
+			"root": "sub-pages",
+			"pages": [
+				{
+					"path": "article-info/index",
+					"style": {
+						"backgroundColor": "#ff0000"
+					}
+				},
+				{
+					"path": "login/index"
+				},
+				{
+					"path": "login/email"
+				},
+				{
+					"path": "comment/index",
+					"style": {
+						"enablePullDownRefresh": true
+						// "navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "report/index"
+				},
+				{
+					"path": "gallery/index",
+					"style": {
+						"navigationBarTitleText": "我的相册"
+					}
+				},
+				{
+					"path": "gallery/upload",
+					"style": {
+						"navigationBarTitleText": "上传图片"
+					}
+				},
+				{
+					"path": "gallery/list",
+					"style": {
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "gallery/info",
+					"style": {
+						"backgroundColor": "#000000"
+					}
+				}
+			]
+		}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "white",
+		"navigationBarTitleText": "Blog1997",
+		"navigationBarBackgroundColor": "#131313",
+		"backgroundColor": "#131313"
+	},
+	"tabBar": {
+		"color": "#f5f7fa",
+		"backgroundColor": "#131313",
+		"selectedColor": "#2979ff",
+		"iconWidth": "12px",
+		"list": [
+			{
+				"text": "首页",
+				"pagePath": "pages/index/index",
+				"iconPath": "static/tabbar/index.png",
+				"selectedIconPath": "static/tabbar/index-selected.png"
+			},
+			{
+				"text": "我的",
+				"pagePath": "pages/user/user",
+				"iconPath": "static/tabbar/user.png",
+				"selectedIconPath": "static/tabbar/user-selected.png"
+			}
+		]
+	},
+	"easycom": {
+		"autoscan": true,
+		"custom": {
+			// uni-ui 规则如下配置
+			"^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue"
+		}
+	}
+}

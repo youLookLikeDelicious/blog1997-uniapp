@@ -1,0 +1,201 @@
+<template>
+  <view class="comment-wrapper uni-mt-10" hover-class="none" hover-stop-propagation="false">
+    <view class="uni-py-7" hover-class="none" hover-stop-propagation="false">
+      <text class="font-weight-bold">最新评论</text>
+    </view>
+    <!-- 评论列表 begin -->
+    <uni-list>
+      <uni-list-item v-for="comment in comments" :key="comment.id" direction="column" class="bg-primary" clickable @click="handleShowComment(comment)">
+        <!-- 评论内容部分 -->
+        <template #body>
+          <comment-box :comment="comment" @longpress="handleLongPress(comment)">
+            <button v-if="comment.commented" plain @click.stop="handleShowReply(comment)" class="button-text color-primary">{{ comment.commented }}条回复>></button>
+          </comment-box>
+        </template>
+      </uni-list-item>
+    </uni-list>
+		<uni-load-more v-if="showLoadMore && hasMore" :status="hasMore ? 'more' : 'noMore'" :content-text="{ contentdown: '查看更多' }" @clickLoadMore="handleShowMoreComments" />
+		<uni-load-more v-else :status="hasMore ? 'more' : 'noMore'" :content-text="{ contentdown: '查看更多' }" />
+    <!-- 评论列表 end -->
+    <!-- 输入框 -->
+    <view class="footer flex-direction-row uni-py-1 uni-pl-3 align-item-center bg-primary">
+      <view @click="handleShowComment()">
+        <uni-easyinput prefixIcon="chat" :value="form.content" placeholder="评论一下,前排打call" :inputBorder="false" disabled></uni-easyinput>
+      </view>
+      <thumb-up class="uni-ml-3" :thumbed="props.thumbed" :able-id="props.ableId" able-type="article" />
+      <view class="flex-direction-row justify-content-center" space="false" decode="false">
+        <uni-icons type="chat" color="#999" @click="handleScrollToComment" size="24"/>
+        <text>{{ (props.count ?? 0) + thisCommentCount }}</text>
+      </view>
+      <button open-type="share" plain size="mini">
+        <uni-icons type="redo" color="#999" size="24" />
+      </button>
+    </view>
+
+    <!-- 评论文本框 -->
+    <uni-popup ref="popup" type="bottom">
+      <view>
+        <uni-easyinput v-model="form.content" type="textarea" :placeholder="placeholder" />
+        <view class="bg-primary submit-btn-wrapper uni-pa-5 align-item-end">
+          <button type="primary" size="mini" :disabled="!form.content" @click="handleComment">发送</button>
+        </view>
+      </view>
+    </uni-popup>
+    <reply-list ref="replyListRef" v-model:num="thisCommentCount"></reply-list>
+    <comment-menu ref="menu" @deleted="handleDeleteReply"></comment-menu>
+  </view>
+</template>
+
+<script lang="ts" setup>
+import { saveComment } from '@/api'
+import CommentMenu from './menu.vue'
+import replyList from './reply-list.vue'
+import commentBox from './comment-box.vue'
+import { usePage } from '@/composition/page'
+import { useCheckLogin } from '@/composition'
+import ThumbUp from '@/components/thumb-up/index.vue'
+import { getCurrentInstance, ref, reactive, defineProps, computed, watch, toRef } from 'vue'
+
+interface Props {
+  count?: number,
+  showLoadMore?: boolean,
+  ableId: string | number,
+  currentPage?: number,
+  loadData: Function,
+  thumbed?: boolean
+}
+
+const props = defineProps<Props>()
+const hasMore = ref<boolean>(false)
+
+// 查看用户是否登陆
+const { checkLogin, userStore } = useCheckLogin()
+
+// 显示评论输入框
+const popup = ref()
+const form = reactive({ content: '' })
+const newComments = reactive<component.Comment[]>([])
+const placeholder = computed(() => {
+  if (commentable.value) {
+    return `回复: ${commentable.value.user.name}`
+  }
+  return '说点什么'
+})
+
+// 打开评论输入框
+const commentable = ref<component.Comment>()
+const handleShowComment = (able?: component.Comment) => {
+  commentable.value = able
+  if (!userStore.id) {
+    uni.navigateTo({
+      url:'/sub-pages/login/index',
+    })
+    return
+  }
+  popup.value.open()
+}
+
+const { dataList, query, loadData } = usePage<component.Comment>(props.loadData)
+defineExpose({ dataList, query, loadData, hasMore })
+
+// 当前的评论数量
+const thisCommentCount = ref(0)
+// 评论列表
+const comments = computed(() => {
+  return newComments.concat(dataList.filter(comment => !newComments.some(item => item.id === comment.id)))
+})
+
+// 评论
+const handleComment = () => {
+  checkLogin().then(() => {
+    saveComment({ 
+        content: form.content, 
+        able_type: commentable.value ? 'comment' : 'article',
+        able_id: commentable.value ? commentable.value.id : props.ableId 
+      })
+      .then((res) => {
+        uni.showToast({ title: commentable.value ? '回复成功' : '评论成功' })
+        form.content = ''
+        popup.value.close()
+  
+        if (!commentable.value) {
+          newComments.unshift(res.data.data)
+        } else {
+          const findHandler = (comment: component.Comment) => comment.id === commentable.value?.id
+          const tmpComment = dataList.find(findHandler) || newComments.find(findHandler)
+          if (tmpComment) {
+            tmpComment.commented += 1
+          }
+        }
+        thisCommentCount.value += 1
+        commentable.value = undefined
+      })
+  })
+}
+
+// 处理删除评论
+const handleDeleteReply = (id: number | string, num: number) => {
+  thisCommentCount.value -= num
+  const findHandler = (comment: component.Comment): boolean => comment.id === id
+  const newCommentIndex = newComments.findIndex(findHandler)
+  if (newCommentIndex >= 0) {
+    newComments.splice(newCommentIndex, 1)
+    return
+  }
+
+  const index = dataList.findIndex(findHandler)
+  if (index >= 0) {
+    dataList.splice(index, 1)
+  }
+}
+
+
+watch(
+  [toRef(props, 'ableId'), toRef(props, 'currentPage')],
+  () => {
+    if (!props.ableId) return
+    if (props.currentPage) {
+      query.value.page = props.currentPage
+    }
+
+    loadData()
+      .then(() => {
+        hasMore.value = !!query.value && query.value.page < query.value.last_page
+      })
+  }
+)
+
+// 页面滚动到评论部分
+const instance = getCurrentInstance()
+const handleScrollToComment = () => {
+  uni.pageScrollTo({ scrollTop: 0, duration: 0 })
+  uni.createSelectorQuery().in(instance)
+    .select('.comment-wrapper')
+    .boundingClientRect((data) => {
+      uni.pageScrollTo({ scrollTop: data.top })
+    }).exec()
+}
+
+// 显示更多评论
+const handleShowMoreComments = () => {
+  uni.navigateTo({
+    url: `/sub-pages/comment/index?able_id=${encodeURIComponent(props.ableId)}`
+  })
+}
+
+// 显示回复
+const replyListRef = ref()
+const handleShowReply = (comment: component.Comment) => {
+  replyListRef.value?.open(comment)
+}
+
+// 长按菜单
+const menu = ref()
+const handleLongPress = (comment: component.Comment) => {
+  menu.value.open({ ableId: comment.id, ableType: 'comment', deletable: userStore.id === comment.user.id })
+}
+</script>
+
+<style lang="scss" scoped>
+@import './index.scss';
+</style>

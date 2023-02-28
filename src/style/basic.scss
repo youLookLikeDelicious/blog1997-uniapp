@@ -1,0 +1,63 @@
+page, .container, .uni-select__selector {
+  background: $uni-bg-color-grey !important;
+  color: #f5f7fa;
+}
+
+/* 解决小程序和app滚动条的问题 */
+/* #ifdef MP-WEIXIN || APP-PLUS */
+::-webkit-scrollbar {
+	display: none;
+	width: 0 !important;
+	height: 0 !important;
+	-webkit-appearance: none;
+	background: transparent;
+}
+
+/* #endif */
+/* 解决H5 的问题 */
+/* #ifdef H5 */
+uni-scroll-view .uni-scroll-view::-webkit-scrollbar {
+  /* 隐藏滚动条，但依旧具备可以滚动的功能 */
+  display: none
+}
+/* #endif */
+
+// 基础样式调整
+button[type=primary] {
+  background-color: $uni-color-primary !important;
+  &:active, &:focus {
+    background-color: #0172ec !important;
+  }
+}
+
+.is-input-border, .uni-select, .file-picker__box-content, .uni-select__selector  {
+  border-color: $uni-border-color !important;
+}
+.uni-popper__arrow::after {
+  border-bottom-color: $uni-border-color !important;
+}
+
+.uni-select__selector-item:hover {
+  background-color: $uni-bg-color-grey !important;
+}
+
+.uni-load-more {
+  margin-top: 45rpx;
+}
+
+.uni-list--border-top, .uni-list--border:after, .uni-list--border-bottom {
+  background-color: $uni-border-color !important;
+}
+
+
+.uni-easyinput__content, .uni-highlight:active {
+  background-color: $uni-bg-color-grey !important;
+}
+
+.uni-list-item  {
+  background-color: transparent !important;
+}
+
+textarea, input, .uni-select__input-text {
+  color: #f5f7fa !important;
+}

@@ -1,0 +1,56 @@
+<template>
+	<uni-list v-if="articles.length" class="uni-px-10">
+		<uni-list-item v-for="(article, index) in articles"
+			class="uni-list-item uni-my-6 uni-mx-6 position-relative"
+			:key="index"
+			:show-arrow="false"
+			:to="`/sub-pages/article-info/index?identity=${article.identity}`">
+			<!-- <template #header>
+				<image class="cover uni-mr-4" v-if="article.gallery" mode="aspectFill" lazy-load webp :src="`${article.gallery.url}?t=min`"></image>
+			</template> -->
+			<template #body>
+				<view class="flex-1" hover-class="none">
+					<view class="uni-list-item__content flex-1 display-flex flex-direction-column uni-px-10 uni-pb-10">
+						<view class="uni-mt-6 uni-py-0 title color-ivory">{{ article.title }}</view>
+						<view class="article-footer display-flex flex-direction-row uni-mt-3 color-ivory">
+							<view>{{ article.author.name }}</view>
+							<view class="display-flex flex-direction-row">
+								<uni-icons type="eye" class="uni-mr-3" color="#f5f7fa"></uni-icons>
+								<view>{{ article.visited }}</view>
+							</view>
+						</view>
+						<view class="summary color-ivory uni-mt-6">{{ article.summary.replace(/<\/?\w>/g, '').slice(0, 45) + '...' }}</view>
+					</view>
+					<curtain :thumbnail="article.gallery.thumbnail" :url="`${article.gallery.url}?t=min`"></curtain>
+					<!-- <view class="cover-new flex-direction-row" hover-class="none" hover-stop-propagation="false">
+						<image :src="`${article.gallery.url}?t=min`" mode="widthFix" lazy-load="false" binderror="" @load="hanldeLoad" />
+					</view> -->
+				</view>
+			</template>
+		</uni-list-item>
+	</uni-list>
+	<uni-load-more :status="moreStatus" />
+</template>
+
+<script setup lang="ts">
+import curtain from '@/components/curtain/curtain.vue'
+
+interface Props {
+	articles: Array<component.Article>,
+	moreStatus: string
+}
+
+const props = defineProps<Props>()
+</script>
+
+<style lang="scss" scoped>
+.cover {
+	width: 170rpx;
+	height: 170rpx;
+	margin-top: 27rpx;
+	border-radius: 8rpx;
+}
+uni-list-item {
+	width: 700rpx;
+}
+</style>

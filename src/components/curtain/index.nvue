@@ -1,0 +1,99 @@
+<template>
+	<!-- canvas版本 -->
+	<cover-view>
+		<canvas :canvas-id="id" :id="id" :class="{ 'curtain-canvas-show': imageActivated }" class="curtain curtain-canvas flex-1" />
+		<canvas v-if="props.thumbnail" :canvas-id="id + 'mini'" :id="id + 'mini'" class="curtain flex-1" />
+	</cover-view>
+</template>
+
+<script lang="ts" setup>
+import { watchEffect, defineProps, getCurrentInstance, onMounted, ref } from 'vue'
+
+interface Props {
+	url: string,
+	thumbnail: string,
+	title?: string
+}
+
+const imageActivated = ref(false)
+let ctx: UniApp.CanvasContext
+let ctxMini: UniApp.CanvasContext
+const width = ref(0)
+
+const id = ref(Date.now() + '' + Math.random())
+const props = defineProps<Props>()
+
+const instance = getCurrentInstance()
+
+// 绘制封面
+const rendCanvas = (image: string, ctx: UniApp.CanvasContext) => {
+	ctx.drawImage(image, 0, 0, width.value, 200)
+
+	// const grd = ctx.createCircularGradient(width.value / 2, 150, width.value / 2)
+	// grd.addColorStop(0, 'rgba(0, 0, 0, 0.5)')
+	// grd.addColorStop(0.4, 'rgba(0, 0, 0, 0.7)')
+	// grd.addColorStop(1, 'rgba(0, 0, 0, 0.9)')
+	const grd = ctx.createLinearGradient(0, 0, width.value, 0)
+	grd.addColorStop(0, 'rgba(255, 120, 23, 0.5)')
+	grd.addColorStop(0.4, 'rgba(175, 0, 45, 0.7)')
+	grd.addColorStop(1, 'rgba(49, 145, 151, 0.9)')
+	ctx.stroke()
+	ctx.setFillStyle(grd)
+	ctx.fillRect(0, 0, width.value, 200)
+	ctx.stroke()
+	// const { width: fontWidth } = ctx.measureText(props.title)
+	// ctx.font = '30px sans-serif 900'
+	// const fontGrd = ctx.createLinearGradient(10, 50, fontWidth + 10, 100)
+	// fontGrd.addColorStop(0, 'rgba(0,198,251, 0.9)')
+	// fontGrd.addColorStop(1, 'rgba(0,91,234, 0.9)')
+	// ctx.setFontSize(32)
+	// ctx.setFillStyle(fontGrd)
+	// ctx.fillText(props.title, 10, 50)
+	ctx.draw()
+}
+
+watchEffect(() => {
+	if (props.url && width.value) {
+		ctx = uni.createCanvasContext(id.value, instance)
+		uni.downloadFile({
+			url: props.url,
+			success: res =>{
+				rendCanvas(res.tempFilePath, ctx)
+				imageActivated.value = true
+			}
+		})
+	}
+	
+	if (props.thumbnail && width.value) {
+		ctxMini = uni.createCanvasContext(id.value + 'mini', instance)
+		rendCanvas(props.thumbnail, ctxMini)
+	}
+})
+
+onMounted(() => {
+	width.value = uni.getWindowInfo().windowWidth
+})
+
+</script>
+
+<style lang="scss" scoped>
+	.curtain {
+		border-radius: 7rpx;
+		height: 200px;
+		left: 0;
+		position: absolute;
+		top: 0;
+		right: 0;
+		width: 740rpx;
+	}
+	.curtain-canvas {
+		border-radius: 5px;
+		overflow: hidden;
+		opacity: 0;
+		transition: opacity 3s;
+		z-index: 1;
+	}
+	.curtain-canvas-show {
+		opacity: 1;
+	}
+</style>

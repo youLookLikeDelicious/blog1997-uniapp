@@ -1,0 +1,156 @@
+<template>
+  <!-- 相册详情 -->
+  <view class="container uni-pa-8" hover-class="none" hover-stop-propagation="false">
+    <uni-grid :column="3" :showBorder="false">
+      <uni-grid-item v-for="(image, index) in dataList" :key="image.id" :index="image.id">
+        <view class="uni-pa-1 relative-position flex-1" hover-class="none" hover-stop-propagation="false" @click="handleShowInfo(image, index)">
+          <radio v-if="batchOperate" :value="image.id" :checked="selectedImages.includes(image.id)"/>
+          <image class="img" :src="`${image.url}?t=min`" mode="aspectFill" lazy-load="false"></image>
+        </view>
+      </uni-grid-item>
+    </uni-grid>
+    <!-- 底部菜单 -->
+    <view class="footer uni-py-3 uni-px-7" hover-class="none" hover-stop-propagation="false">
+      <view v-if="!batchOperate" class="flex-direction-row justify-content-between" hover-class="none" hover-stop-propagation="false">
+        <view class="align-item-center btn" @click="batchOperate = true">
+          <uni-icons type="color" color="" size="24" />
+          <text class="">管理</text>
+        </view>
+        <view plain class="btn align-item-center" hover-class="color-grey"  @click.stop="handleUpload">
+          <uni-icons type="upload" color="" size="24" />
+          <text class="">上传</text>
+        </view>
+      </view>
+      <view v-else class="flex-direction-row justify-content-between" hover-class="none" hover-stop-propagation="false">
+        <view class="align-item-center btn" @click="batchOperate = false; selectedImages = []" hover-class="color-grey">
+          <uni-icons type="undo" color="" size="24" />
+          <text class="">取消</text>
+        </view>
+        <view class="flex-direction-row" hover-class="none" hover-stop-propagation="false">
+          <!-- <view class="align-item-center btn" :disabled="!!selectedImages.length" hover-class="color-grey">
+            <uni-icons type="download" color="" size="24" />
+            <text class="">下载</text>
+          </view> -->
+          <view class="align-item-center btn uni-ml-10" hover-class="color-grey" @click.stop="handleDelete">
+            <uni-icons type="trash" color="" size="16" />
+            <text class="">删除</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</template>
+
+<script lang="ts" setup>
+import { ref } from 'vue'
+import { usePage } from '@/composition/page'
+import { onLoad, onUnload } from '@dcloudio/uni-app'
+import { getGallery, batchDeleteGallery } from '@/sub-pages/api/gallery'
+
+interface Image {
+  id: number,
+  url: string
+}
+const { query, dataList, loadData, handleSearch } = usePage<Image>(getGallery, true)
+
+onLoad((options) => {
+  query.value.id = options?.album_id
+  loadData()
+})
+
+// 查看图片详情
+const handleShowInfo = (image: Image, current: number) => {
+  // 处理选中状态
+  if (batchOperate.value) {
+    const ind = selectedImages.value.findIndex(id => id === image.id)
+    if (ind >= 0) {
+      selectedImages.value.splice(ind, 1)
+    } else {
+      selectedImages.value.push(image.id)
+    }
+    return
+  }
+
+  // 查看详情
+  uni.navigateTo({
+    url:'/sub-pages/gallery/info',
+    success: ()=>{
+      setTimeout(() => {
+        uni.$emit('set-gallery-list', { list: dataList, total: query.value.total, current })
+      }, 200)
+    },
+  })
+}
+
+// 批量操作
+const batchOperate = ref(false)
+const selectedImages = ref<number []>([])
+// 批量删除图片
+const handleDelete = () => {
+  if (!selectedImages.value.length) {
+    uni.showToast({ title: '请选择图片', icon: 'error' })
+    return
+  }
+  batchDeleteGallery({ ids: selectedImages.value, album_id: query.value.id })
+    .then(() => {
+      uni.showToast({ title: '删除成功' })
+      handleSearch()
+    })
+}
+
+// 上传图片
+const handleUpload = () => {
+  uni.navigateTo({ url: `/sub-pages/gallery/upload?album_id=${query.value.id}` })
+}
+
+// 刷新列表 上传和删除后回调
+onLoad(() => {
+  uni.$on('refresh-gallery', handleSearch)
+  uni.$on('append-gallery-list', () => {
+    query.value.page += 1
+    console.log('append')
+    loadData().then(() => {
+      uni.$emit('set-gallery-list', { list: dataList, total: query.value.total })
+    })
+  })
+})
+onUnload(() => {
+  uni.$off('refresh-gallery')
+  uni.$off('append-gallery-list')
+})
+
+</script>
+
+<style lang="scss" scoped>
+.img {
+  border-radius: 12rpx;
+  height: 100%;
+  width: 100%;
+}
+radio {
+  position: absolute;
+  right: 12rpx;
+  top: 12rpx;
+  z-index: 2;
+  transform: scale(.7);
+}
+
+$height: 105rpx;
+.footer {
+  right: 0;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  height: $height;
+  overflow: hidden;
+  text {
+    font-size: 24rpx;
+  }
+  >view {
+    height: $height;
+  }
+}
+.container {
+  padding-bottom: $height;
+}
+</style>

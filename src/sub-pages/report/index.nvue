@@ -1,0 +1,95 @@
+<template>
+  <view class="uni-px-10" hover-class="none" hover-stop-propagation="false">
+    <uni-forms ref="form" :modelValue="formData" :rules="rules" label-position="top">
+      <uni-forms-item required label="原因" name="reason">
+        <radio-group class="display-flex" @change="handleChange">
+          <radio v-for="reason in reasons" :key="reason" color="#007aff" :value="reason" :checked="formData.reason === reason">{{ reason }}</radio>
+        </radio-group>
+      </uni-forms-item>
+      <uni-forms-item label="内容" name="content">
+        <uni-easyinput v-model="formData.content" type="textarea" />
+      </uni-forms-item>
+      <button class="flex-1" type="primary" @click="handleSubmit">提交</button>
+    </uni-forms>
+  </view>
+</template>
+
+<script lang="ts" setup>
+import { onLoad } from '@dcloudio/uni-app'
+import { reportIllegalInfo } from '@/api'
+import { computed, reactive, ref } from 'vue'
+
+const DEFAULT_FORM_DATA = { reported_id: '', type: '', reason: '', content: '' }
+const REASON_MAP: Record<string, string[]> = {
+  article: [
+    '抄袭或未授权转载',
+    '广告垃圾信息',
+    '其他原因'
+  ],
+  comment: [
+    '无意义的评论',
+    '恶意攻击谩骂',
+    '营销广告',
+    '淫秽色情',
+    '政治反动',
+    '虚假信息',
+    '其他原因'
+  ]
+}
+
+
+const rules = {
+  reason: {
+    rules: [
+      { required: true, errorMessage: '请选择原因' }
+    ]
+  }
+}
+
+const form = ref()
+const formData = reactive({ ...DEFAULT_FORM_DATA })
+
+// 获取传参
+onLoad((options) => {
+  Object.assign(formData, (options as { type: string, reported_id: number | string }))
+  if (Number.isNaN(formData.reported_id)) {
+    formData.reported_id = decodeURIComponent(formData.reported_id)
+  }
+})
+
+// 举报原因
+const reasons = computed(() => {
+   return REASON_MAP[formData.type] ?? []
+})
+
+// 修改原因
+const handleChange = (event: { detail: { value: string } }) => {
+  formData.reason = event.detail.value
+}
+
+// 提交表单
+const handleSubmit = () => {
+  form.value.validate().then(() => {
+    reportIllegalInfo(formData)
+      .then(() => {
+        setTimeout(() => {
+          uni.showToast({ title: '举报成功' })
+        })
+        
+        uni.navigateBack({ delta: 1 })
+        Object.assign(formData, DEFAULT_FORM_DATA)
+      })
+  })
+}
+</script>
+
+<style lang="scss" scoped>
+radio-group {
+  flex-wrap: wrap;
+}
+radio {
+  flex-basis: 50%;
+  transform: scale(.7);
+  font-size: 36rpx;
+}
+</style>

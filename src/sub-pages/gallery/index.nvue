@@ -1,0 +1,135 @@
+<template>
+  <!-- 相册列表 -->
+  <view class="container">
+    <uni-grid :column="2" :showBorder="false" class="uni-mt-10">
+      <uni-grid-item v-for="album in dataList" :key="album.id">
+        <view class="album-box align-item-center position-relative" @click="handleClickAlbum(album)" @longpress="handleLongPress">
+          <image :src="`${album.gallery?.url || '/static/empty-img.png'}?t=min`" fill="aspectFit"></image>
+          <view class="" hover-class="none" hover-stop-propagation="false">
+            <text>{{ album.name }}</text>
+            <text class="color-grey count">{{ album.total }}张</text>
+          </view>
+          <view class="align-item-end delete-btn-wrapper position-absolute" hover-class="none" hover-stop-propagation="false">
+            <uni-transition mode-class="zoom-in" :show="deleteModel">
+              <view class="delete-btn-box align-item-center" hover-class="none" hover-stop-propagation="false" @click.stop="handleDeleteAlbum(album.id)">
+                <uni-icons type="trash" color="#ffffff" size="16" />
+              </view>
+            </uni-transition>
+          </view>
+        </view>
+      </uni-grid-item>
+    </uni-grid>
+    <uni-fab
+      ref="fab"
+      horizontal="right"
+      vertical="bottom"
+      direction="horizontal"
+      :content="fabContent"
+      @trigger="handleTrigger"
+    />
+    <uni-load-more :status="moreStatus" />
+
+    <!-- 删除确认框 -->
+    <uni-popup ref="alertDialog" type="dialog">
+      <uni-popup-dialog
+        type="info"
+        mode="base"
+        title="删除相册后,照片无法恢复"
+        @confirm="handleConfirmDelete"
+      />
+    </uni-popup>
+  </view>
+</template>
+
+<script lang="ts" setup>
+import { ref, onUnmounted } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import { usePage } from '@/composition/page'
+import { getAlbum, deleteAlbum } from '@/sub-pages/api/gallery'
+
+const { dataList, loadData, moreStatus, handleReset } = usePage<component.Album>(getAlbum, true)
+
+onLoad(() => {
+  loadData()
+})
+
+const fabContent = [
+  {
+    text: '上传图片',
+    iconPath: '/static/image.png'
+  }
+]
+
+const fab = ref()
+const handleTrigger = (e: { item: { text: string } }) => {
+  if (e.item.text === '上传图片') {
+    uni.navigateTo({ url: '/sub-pages/gallery/upload' })
+  }
+  fab.value.isShow = false
+}
+
+const deleteModel = ref(false)
+// 处理点击相册事件
+const handleClickAlbum = (album: component.Album) => {
+  if (deleteModel.value) {
+    deleteModel.value = false
+    return
+  }
+
+  uni.navigateTo({ url: `/sub-pages/gallery/list?album_id=${album.id}` })
+}
+
+// 长按相册,出现删除按钮
+const handleLongPress = () => {
+  deleteModel.value = true
+}
+
+// 删除相册
+let deleteId: number
+const alertDialog = ref()
+// 1 弹出对话框
+const handleDeleteAlbum = (id: number) => {
+  deleteId = id
+  alertDialog.value.open()
+}
+// 2 确认删除
+const handleConfirmDelete = () => {
+  deleteAlbum(deleteId).then(() => {
+    uni.showToast({ title: '删除相册成功' })
+    handleReset()
+    deleteId = 0
+  })
+}
+
+uni.$on('refresh-album', handleReset)
+onUnmounted(() => {
+  uni.$off('refresh-album')
+})
+</script>
+
+<style lang="scss" scoped>
+.album-box {
+  image {
+    border-radius: 12rpx;
+    height: 300rpx;
+    width: 300rpx;
+  }
+  .count {
+    font-size: 24rpx;
+  }
+  >view {
+    width: 300rpx;
+  }
+}
+.delete-btn-wrapper {
+  right: 52rpx;
+  top: 12rpx;
+  .delete-btn-box {
+    $size: 45rpx;
+    width: $size;
+    height: $size;
+    border-radius: 12rpx;
+    background-color: rgba(#000, .6);
+  }
+}
+</style>

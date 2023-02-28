@@ -1,0 +1,113 @@
+<template>
+  <page-meta :page-style="`overflow: ${overflow}`"></page-meta>
+	<view class="container uni-px-5">
+		<view class="article-header uni-mt-1 display-flex overflow-hidden">
+			<view class="article-info uni-pb-9 uni-pl-7 display-flex flex-direction-column">
+				<uni-title type="h1" style="font-size: 36rpx" :title="article.title" color="#f5f7fa"></uni-title>
+				<!-- 作者等信息 -->
+				<view class="user-box display-flex align-item-end justify-content-between uni-pr-7" hover-stop-propagation="false">
+					<view class="flex-direction-row" hover-class="none" hover-stop-propagation="false">
+						<cover-image v-if="article.author.avatar" :src="article.author.avatar" class="uni-mr-5 avatar" mode="aspectFill" lazy-load="false"></cover-image>
+						<view class="display-flex flex-direction-column uni-py-3 justify-content-between">
+							<view class="color-ivory font-size-24">
+								{{ article.author.name }}
+							</view>
+							<view class="color-ivory font-size-24">
+								{{ article.created_at }}
+							</view>
+						</view>
+					</view>
+					<view class="flex-direction-row color-ivory" hover-class="none" hover-stop-propagation="false">
+						<uni-icons type="eye" color="#f5f5f5" size="18"></uni-icons>
+						{{ article.visited }}
+					</view>
+				</view>
+			</view>
+			<curtain :url="article.gallery.url" :title="article.title" :thumbnail="article.gallery.thumbnail" />
+		</view>
+		<view class="content-wrapper uni-mt-5">
+			<mp-html :tag-style="tagStyle" :content="article.content"></mp-html>
+		</view>
+		<comment
+			ref="commentEl"
+			:count="article.commented"
+			:thumbed="article.thumbs"
+			:load-data="(query: any) => getComments(article.identity, query)"
+			:show-load-more="true"
+			:able-id="article.identity" />
+	</view>
+</template>
+
+<script setup lang="ts">
+import { reactive, ref } from 'vue'
+import { onLoad, onUnload } from '@dcloudio/uni-app'
+import curtain from '@/components/curtain/curtain.vue'
+import comment from '@/components/comment/index.nvue'
+import { getArticleInfo, getComments } from '@/api/article'
+
+const overflow = ref('visible')
+
+const article = reactive({
+	commented: 0,
+	content: '',
+	created_at: '',
+	identity: '',
+	thumbs: false,
+	title: '',
+	visited: 0,
+	gallery: {
+		url: '',
+		thumbnail: ''
+	},
+	author: {
+		id: '',
+		name: '',
+		avatar: ''
+	}
+})
+
+// 标签样式
+const tagStyle = {
+	p: 'line-height: 30px; text-align: justify; text-indent: 2em; color: #d5d7de'
+}
+onLoad(params => {
+	if (!params || !params.identity) return
+	uni.$on('set-overflow', (value) => {
+		overflow.value = value
+	})
+	getArticleInfo(params.identity, { wechat: 'wechat' })
+		.then(res => {
+			Object.assign(article, res.data.data.article)
+			uni.setNavigationBarTitle({
+				title: article.title
+			})
+		})
+})
+
+onUnload(() => {
+	uni.$off('set-overflow')
+})
+</script>
+
+<style lang="scss" scoped>
+.article-header {
+	height: 200px;
+	justify-content: space-between;
+	position: relative;
+	.article-info {
+		flex-grow: 1;
+		justify-content: space-between;
+		position: relative;
+		z-index: 2;
+	}
+	.user-box {
+		flex-direction: row;
+		flex-wrap: nowrap;
+	}
+}
+.content-wrapper {
+	pre {
+		background-color: #f8f8f8;
+	}
+}
+</style>

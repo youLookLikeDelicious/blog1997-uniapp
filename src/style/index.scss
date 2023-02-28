@@ -1,0 +1,122 @@
+@import './basic.scss';
+
+$avatar-size: 45px;
+$avatar-size-large: 110rpx;
+
+.align-item-center {
+	align-items: center !important;
+}
+
+.align-item-end {
+	align-items: flex-end;
+}
+
+.align-self-start {
+	align-self: flex-start;
+}
+
+.avatar {
+	width: $avatar-size;
+	height: $avatar-size;
+	border-radius: $avatar-size;
+}
+.avatar-large {
+	width: $avatar-size-large;
+	height: $avatar-size-large;
+	border-radius: $avatar-size-large;
+}
+
+.bg-primary {
+	background-color: $uni-bg-color !important
+}
+
+.bg-gray {
+	background-color: $uni-bg-color-grey;
+}
+
+.button-text {
+	border: 0 !important;
+	font-size: 24rpx;
+	background-color: transparent !important;
+	width: fit-content;
+	padding: 0;
+}
+
+.btn {
+  transition: color .2s;
+}
+
+.color-primary {
+	color: $uni-color-primary !important;
+}
+
+.color-grey {
+	color: $uni-text-color-grey;
+}
+.color-ivory {
+	color: #f5f7fa !important;
+}
+.color-text {
+	color: $uni-text-color;
+}
+
+.display-flex {
+	display: flex !important;
+}
+
+.flex-1 {
+	flex: 1;
+}
+
+.flex-direction-column {
+	flex-direction: column !important;
+}
+
+.flex-direction-row {
+	flex-direction: row !important;
+}
+
+.font-size-24 {
+	font-size: 24rpx;
+}
+
+.font-weight-bold {
+	font-weight: bold;
+}
+
+.justify-content-between {
+	justify-content: space-between;
+}
+
+.justify-content-center {
+	justify-content: center !important;
+}
+
+.justify-content-end {
+	justify-content: flex-end !important;
+}
+
+.overflow-hidden {
+	overflow: hidden;
+}
+
+.position-absolute {
+	position: absolute !important;
+}
+.position-relative {
+	position: relative !important;
+}
+
+.position-sticky {
+	position: sticky !important;
+}
+
+// 样式穿透 --只能页面穿透到组件
+.comment-wrapper {
+	:deep(.is-input-border) {
+		border-radius: 0 !important;
+	}
+	.is-focused {
+		border-color: #666 !important;
+	}
+}

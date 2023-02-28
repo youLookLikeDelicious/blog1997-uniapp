@@ -1,0 +1,267 @@
+<template>
+  <page-meta>
+    <navigation-bar :title="`${totalNum <= 2 ? swiperIndex + 1 : currentIndex + 1}/${totalNum}`" />
+  </page-meta>
+  <view class="container justify-content-center" hover-class="none" hover-stop-propagation="false">
+    <swiper :circular="circular" :current="swiperIndex" @change="handleSwiperChange" :duration="0">
+      <swiper-item v-for="(image, index) in imageList" :key="index">
+        <image class="flex-1" style="width: auto" :key="image.url" :src="image.url" mode="widthFix" lazy-load="false" binderror="" bindload="" />
+      </swiper-item>
+    </swiper>
+    <view class="footer flex-direction-row justify-content-between uni-px-10 uni-pb-5" hover-class="none" hover-stop-propagation="false">
+      <view class="btn align-item-center" hover-class="color-grey" hover-stop-propagation="false" @click="handleDownloadImage">
+        <uni-icons type="download" size="24" color="#999"></uni-icons>
+        <text class="" selectable="false" style="color: #999" space="false" decode="false">
+          下载
+        </text>
+      </view>
+      <view class="btn align-item-center" hover-class="color-grey" hover-stop-propagation="false" @click="handleShowMore">
+        <uni-icons type="more-filled" size="24" color="#999"></uni-icons>
+        <text class="" selectable="false" space="false" style="color: #999" decode="false">
+          更多信息
+        </text>
+      </view>
+    </view>
+    <uni-popup ref="popup" mask-background-color="rgba(0, 0, 0, 0.9)" type="bottom">
+      <view class="color-ivory uni-pb-16 uni-px-10" hover-class="none" hover-stop-propagation="false">
+        <uni-row class="custom-uni-row">
+          <uni-col :span="5">相机名称: </uni-col>
+          <uni-col :span="20">{{ imageInfo.camera_name }}</uni-col>
+        </uni-row>
+        <uni-row class="custom-uni-row">
+          <uni-col :span="5">拍摄时间: </uni-col>
+          <uni-col :span="20">{{ imageInfo.date_time }}</uni-col>
+        </uni-row>
+        <uni-row class="custom-uni-row">
+          <uni-col :span="5">曝光时间: </uni-col>
+          <uni-col :span="20">{{ imageInfo.exposure_time }}</uni-col>
+        </uni-row>
+        <uni-row class="custom-uni-row">
+          <uni-col :span="5">光圈数: </uni-col>
+          <uni-col :span="20">{{ imageInfo.f_number }}</uni-col>
+        </uni-row>
+        <uni-row class="custom-uni-row">
+          <uni-col :span="5">焦距: </uni-col>
+          <uni-col :span="20">{{ imageInfo.focal_length }}</uni-col>
+        </uni-row>
+        <!-- <uni-row class="custom-uni-row">
+          <uni-col :span="5">地点: </uni-col>
+          <uni-col :span="20">{{ imageInfo.location }}</uni-col>
+        </uni-row> -->
+        <uni-row class="custom-uni-row">
+          <uni-col :span="5">备注: </uni-col>
+          <uni-col :span="20">
+            <view class="flex-direction-row" hover-class="none" hover-stop-propagation="false">
+              <text class="" selectable="false" space="false" decode="false">
+                {{ imageInfo.remark }}
+              </text>
+              <uni-icons class="uni-ml-3" type="flag" color="" size="18" @click="handleRemarkImage" />
+            </view>
+          </uni-col>
+        </uni-row>
+      </view>
+    </uni-popup>
+
+    <!-- 添加备注 -->
+    <uni-popup ref="remarkPopup" type="bottom">
+      <view class="uni-py-5 uni-px-10 align-item-end" hover-class="none" hover-stop-propagation="false">
+        <uni-easyinput v-model="remark" type="textarea" placeholder="美好的瞬间,总有值得回忆的地方" />
+        <button plain class="button-text color-ivory" :disabled="!remark" @click="handleSubmitRemark">发布</button>
+      </view>
+    </uni-popup>
+  </view>
+</template>
+
+<script lang="ts" setup>
+import { getGalleryInfo, updateGallery } from '@/sub-pages/api/gallery'
+import { onUnmounted, ref, reactive, computed, toRaw } from 'vue'
+
+interface Image {
+  id: number,
+  url: string,
+  height: string,
+  desc: string
+}
+
+
+const totalNum = ref(0)
+const dataList = ref<Image[]>([])
+const currentIndex = ref(0)
+const swiperIndex = ref(0)
+
+// 判断滑动的方向
+const checkDirectionIsRight = (val: number, preVal: number) => {
+  return (val - 1 === preVal) || (!val && preVal === imageList.value.length - 1)
+}
+
+const imageList = computed(() => {
+  // 当前坐标
+  let dataInd = currentIndex.value
+  let swiperInd = swiperIndex.value
+  
+  if (dataList.value.length <= 2) {
+    return dataList.value
+  }
+  // 锁定后半部分
+  if (sliceDataList.value) {
+    const start = dataList.value.length - (dataList.value.length % 3) - 3
+    return dataList.value.slice(start > 0 ? start : 0)
+  }
+
+  // 下一个的坐标
+  const nextInd = (swiperInd + 1) % 3
+  // 上一个坐标
+  const preIndex = (swiperInd + 2) % 3
+
+  const images = []
+  images[swiperInd] = dataList.value[dataInd]
+  images[preIndex] = dataList.value[dataInd - 1]
+  images[nextInd] = dataList.value[dataInd + 1]
+
+  return images.filter(image => image)
+})
+
+// 判断是否分割最后一部分
+const sliceDataList = computed(() => {
+  return dataList.value.length >= 3 && (currentIndex.value >= dataList.value.length - 3)
+})
+
+// 开启循环
+const circular = computed(() => {
+  if (totalNum.value < 3) return false
+  if (sliceDataList.value) return false
+  return !(currentIndex.value === 0)
+})
+
+const handleSwiperChange = (event: { detail: { current: number } }) => {
+  const current = event.detail.current
+
+  if (current === swiperIndex.value) return
+  // 向右
+  const isToRight = checkDirectionIsRight(current, swiperIndex.value)
+  if (isToRight && currentIndex.value < totalNum.value - 1) {
+    getMoreList()
+    currentIndex.value += 1
+  } else if (!isToRight && currentIndex.value >= 1) {
+    currentIndex.value -= 1
+  }
+  swiperIndex.value = current
+}
+
+// 下载图片
+const handleDownloadImage = () => {
+  uni.downloadFile({
+    url: `${imageList.value[currentIndex.value].url}?origin=1`,
+    success: ({ tempFilePath }) => {
+      uni.saveImageToPhotosAlbum({
+        filePath: tempFilePath,
+        success: () => {
+          uni.showToast({ title: '文件保存成功' })
+        }
+      })
+    }
+  })
+}
+
+// 获取图片详情
+const popup = ref()
+const imageInfo = reactive({
+  location: '',
+  camera_name: '',
+  date_time: '',
+  exposure_time: '',
+  f_number: '',
+  focal_length: '',
+  remark: ''
+})
+const currentImage = computed(() => {
+  return dataList.value[currentIndex.value]
+})
+const handleShowMore = () => {
+  popup.value.open()
+  getGalleryInfo(currentImage.value.id)
+    .then(res => {
+      Object.assign(imageInfo, res.data.data)
+    })
+}
+
+// 给图片添加备注
+const remark = ref('')
+const remarkPopup = ref()
+const handleRemarkImage = () => {
+  remark.value = imageInfo.remark
+  remarkPopup.value.open()
+}
+const handleSubmitRemark = () => {
+  updateGallery(currentImage.value.id, { remark: remark.value })
+    .then(() => {
+      uni.showToast({ title: '备注成功' })
+      imageInfo.remark = remark.value
+      remarkPopup.value.close()
+    })
+}
+
+const getMoreList = () => {
+  const diff = totalNum.value - currentIndex.value
+  if (diff < 5 && totalNum.value > dataList.value.length  ) {
+    uni.$emit('append-gallery-list')
+  }
+}
+
+// 接收图片列表
+const calcSwiperIndex = () => {
+  if (sliceDataList.value) {
+    swiperIndex.value = currentIndex.value - (dataList.value.length - (dataList.value.length % 3 + 3))
+  } else {
+    swiperIndex.value = currentIndex.value % 3
+  }
+}
+
+uni.$on('set-gallery-list', ({ list, total, current }) => {
+  dataList.value = toRaw(list)
+  totalNum.value = total
+  
+  if (current) {
+    currentIndex.value = current
+    getMoreList()
+  }
+  calcSwiperIndex()
+})
+
+onUnmounted(() => {
+  uni.$off('set-gallery-list')
+})
+</script>
+
+<style>
+page {
+ background-color: #0000; 
+ height: 100%;
+}
+</style>
+
+<style lang="scss" scoped>
+.container {
+  height: 100%;
+  background-color: #000;
+}
+swiper {
+  flex: 1;
+  swiper-item {
+    flex-direction: row;
+    image {
+      margin: auto;
+    }
+  }
+}
+
+.custom-uni-row {
+  margin-bottom: 16rpx !important;
+}
+
+/* #ifdef MP-ALIPAY || MP-WEIXIN */
+:deep(.uni-row) {
+	margin-bottom: 16rpx;
+}
+/* #endif */
+</style>
